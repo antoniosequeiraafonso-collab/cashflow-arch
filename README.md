@@ -1,5 +1,7 @@
 # Cashflow Arch
 
-Versão 11:
-- Corrige roda dentada ao lado do campo Categoria
-- Mantém modal de gestão de categorias
+Versão 12:
+- Remove definitivamente a secção antiga de categorias da Home
+- Força roda dentada ao lado do campo Categoria
+- Gestão de categorias passa para modal
+- Saldo da conta no card azul fica sempre branco

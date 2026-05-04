@@ -1180,3 +1180,63 @@ canvas {
     height: 50px !important;
   }
 }
+
+
+/* v12 cleanup: force category gear, hide old category manager, white bank balance */
+.category-manager {
+  display: none !important;
+}
+
+.submit-form .category-field {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 54px !important;
+  gap: 10px !important;
+  align-items: end !important;
+}
+
+.submit-form .category-field label {
+  min-width: 0 !important;
+}
+
+.submit-form .category-field select {
+  width: 100% !important;
+}
+
+.category-gear,
+.icon-button.category-gear,
+#openCategoriesBtn {
+  display: inline-grid !important;
+  place-items: center !important;
+  width: 54px !important;
+  height: 56px !important;
+  min-width: 54px !important;
+  padding: 0 !important;
+  border-radius: 14px !important;
+  border: 1px solid var(--border) !important;
+  background: var(--soft) !important;
+  color: var(--text) !important;
+  font-size: 20px !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+}
+
+.account-balance-card strong,
+#accountBalance,
+.account-balance-card #accountBalance.positive,
+.account-balance-card #accountBalance.negative {
+  color: #ffffff !important;
+}
+
+@media (max-width: 760px) {
+  .submit-form .category-field {
+    grid-template-columns: minmax(0, 1fr) 48px !important;
+  }
+
+  .category-gear,
+  .icon-button.category-gear,
+  #openCategoriesBtn {
+    width: 48px !important;
+    height: 50px !important;
+    min-width: 48px !important;
+  }
+}
