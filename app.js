@@ -166,12 +166,16 @@ function showPin() {
 }
 
 function openCategoryModal() {
-  el("categoryModal").classList.remove("hidden");
+  const modal = el("categoryModal");
+  if (!modal) return;
+  modal.classList.remove("hidden");
   renderCategoryList();
 }
 
 function closeCategoryModal() {
-  el("categoryModal").classList.add("hidden");
+  const modal = el("categoryModal");
+  if (!modal) return;
+  modal.classList.add("hidden");
 }
 
 function setPage(page) {
@@ -236,7 +240,28 @@ function mergeCategories() {
   });
 
   refreshCategoryMap();
-  updateCategoryOptions();
+  
+document.addEventListener("click", (event) => {
+  const openBtn = event.target.closest("#openCategoriesBtn");
+  if (openBtn) {
+    event.preventDefault();
+    openCategoryModal();
+    return;
+  }
+
+  const closeBtn = event.target.closest("#closeCategoriesBtn");
+  if (closeBtn) {
+    event.preventDefault();
+    closeCategoryModal();
+    return;
+  }
+
+  if (event.target.id === "categoryModal") {
+    closeCategoryModal();
+  }
+});
+
+updateCategoryOptions();
   renderCategoryList();
 }
 
@@ -470,7 +495,28 @@ function stopEditing() {
 
   el("movementForm").reset();
   setDefaultDate();
-  updateCategoryOptions();
+  
+document.addEventListener("click", (event) => {
+  const openBtn = event.target.closest("#openCategoriesBtn");
+  if (openBtn) {
+    event.preventDefault();
+    openCategoryModal();
+    return;
+  }
+
+  const closeBtn = event.target.closest("#closeCategoriesBtn");
+  if (closeBtn) {
+    event.preventDefault();
+    closeCategoryModal();
+    return;
+  }
+
+  if (event.target.id === "categoryModal") {
+    closeCategoryModal();
+  }
+});
+
+updateCategoryOptions();
 
   el("editNotice").classList.add("hidden");
   el("submitMovementBtn").textContent = "Guardar movimento";
@@ -889,16 +935,32 @@ el("logoutBtn").addEventListener("click", showPin);
 el("category").addEventListener("change", updateTypePreview);
 el("movementForm").addEventListener("submit", addMovement);
 el("categoryForm").addEventListener("submit", addCategory);
-el("openCategoriesBtn").addEventListener("click", openCategoryModal);
-el("closeCategoriesBtn").addEventListener("click", closeCategoryModal);
-el("categoryModal").addEventListener("click", (event) => {
-  if (event.target.id === "categoryModal") closeCategoryModal();
-});
 el("cancelEditBtn").addEventListener("click", stopEditing);
 el("tableTypeFilter").addEventListener("change", render);
 el("tableCategoryFilter").addEventListener("change", render);
 el("exportBtn").addEventListener("click", exportCSV);
 el("refreshBtn").addEventListener("click", manualRefresh);
+
+
+document.addEventListener("click", (event) => {
+  const openBtn = event.target.closest("#openCategoriesBtn");
+  if (openBtn) {
+    event.preventDefault();
+    openCategoryModal();
+    return;
+  }
+
+  const closeBtn = event.target.closest("#closeCategoriesBtn");
+  if (closeBtn) {
+    event.preventDefault();
+    closeCategoryModal();
+    return;
+  }
+
+  if (event.target.id === "categoryModal") {
+    closeCategoryModal();
+  }
+});
 
 updateCategoryOptions();
 setDefaultDate();

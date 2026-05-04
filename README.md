@@ -1,5 +1,6 @@
 # Cashflow Arch
 
-Versão 13:
-- Remove roda dentada duplicada no campo Categoria
-- Mantém apenas uma roda dentada junto ao dropdown
+Versão 14:
+- Corrige clique da roda dentada
+- Usa event delegation para abrir/fechar modal de categorias
+- Mantém apenas uma roda dentada
