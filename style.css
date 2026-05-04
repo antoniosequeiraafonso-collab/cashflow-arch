@@ -1140,3 +1140,43 @@ canvas {
     text-align: center;
   }
 }
+
+
+/* Gear button hard fix */
+.category-field {
+  display: grid !important;
+  grid-template-columns: 1fr 52px !important;
+  gap: 10px !important;
+  align-items: end !important;
+}
+
+.category-field label {
+  min-width: 0;
+}
+
+.icon-button.category-gear,
+.category-gear {
+  width: 52px !important;
+  height: 56px !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  padding: 0 !important;
+  border-radius: 14px !important;
+  background: var(--soft) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  font-size: 20px !important;
+  line-height: 1 !important;
+}
+
+@media (max-width: 760px) {
+  .category-field {
+    grid-template-columns: 1fr 48px !important;
+  }
+
+  .icon-button.category-gear,
+  .category-gear {
+    width: 48px !important;
+    height: 50px !important;
+  }
+}
