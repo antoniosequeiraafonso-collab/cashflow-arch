@@ -15,7 +15,7 @@ import {
 
 // Firebase config do projecto cashflow-arch
 const firebaseConfig = {
-  apiKey: "AIzaSyBAUXw1GdmWulebWp-CNeB7qmcgXt0B2oQ",
+  apiKey: "AIzaSyBAUXw1GdmWu1ebWp-CNeB7qmcgXt0B2oQ",
   authDomain: "cashflow-arch.firebaseapp.com",
   projectId: "cashflow-arch",
   storageBucket: "cashflow-arch.firebasestorage.app",
