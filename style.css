@@ -1240,3 +1240,14 @@ canvas {
     min-width: 48px !important;
   }
 }
+
+
+/* v13: keep only one gear visually and align it with category dropdown */
+.submit-form .category-field {
+  grid-template-columns: minmax(0, 1fr) 54px !important;
+}
+
+.submit-form .category-field #openCategoriesBtn ~ #openCategoriesBtn,
+.submit-form .category-field .category-gear ~ .category-gear {
+  display: none !important;
+}
