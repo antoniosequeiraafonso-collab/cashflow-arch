@@ -13,7 +13,6 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
 
-// Firebase config do projecto cashflow-arch
 const firebaseConfig = {
   apiKey: "AIzaSyBAUXw1GdmWu1ebWp-CNeB7qmcgXt0B2oQ",
   authDomain: "cashflow-arch.firebaseapp.com",
@@ -26,26 +25,25 @@ const firebaseConfig = {
 
 const PIN = "1906";
 
-const categoriesByType = {
-  Expenses: [
-    "Software Subscriptions",
-    "Stock Order",
-    "Shipping",
-    "IVAT",
-    "Tributação Autónoma",
-    "IRC",
-    "Office Supplies",
-    "Delivery Supplies",
-    "Samples",
-    "Tasting",
-    "Other Expense"
-  ],
-  Inflow: [
-    "Sales B2B",
-    "Sales B2C",
-    "Other Inflow"
-  ]
-};
+const categoryDefinitions = [
+  { name: "Sales B2B", type: "Inflow" },
+  { name: "Sales B2C", type: "Inflow" },
+  { name: "Other Inflow", type: "Inflow" },
+
+  { name: "Software Subscriptions", type: "Expenses" },
+  { name: "Stock Order", type: "Expenses" },
+  { name: "Shipping", type: "Expenses" },
+  { name: "IVAT", type: "Expenses" },
+  { name: "Tributação Autónoma", type: "Expenses" },
+  { name: "IRC", type: "Expenses" },
+  { name: "Office Supplies", type: "Expenses" },
+  { name: "Delivery Supplies", type: "Expenses" },
+  { name: "Samples", type: "Expenses" },
+  { name: "Tasting", type: "Expenses" },
+  { name: "Other Expense", type: "Expenses" }
+];
+
+const categoryTypeByName = Object.fromEntries(categoryDefinitions.map((item) => [item.name, item.type]));
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -55,6 +53,7 @@ const el = (id) => document.getElementById(id);
 
 let movements = [];
 let unsubscribe = null;
+let activePage = "home";
 
 const currency = new Intl.NumberFormat("pt-PT", {
   style: "currency",
@@ -81,21 +80,37 @@ function monthLabel(dateString) {
   return date.toLocaleDateString("pt-PT", { year: "numeric", month: "long" });
 }
 
+function typeLabel(type) {
+  return type === "Inflow" ? "Entrada" : "Despesa";
+}
+
+function inferTypeFromCategory(category) {
+  return categoryTypeByName[category] || "Expenses";
+}
+
 function setDefaultDate() {
   el("date").value = localStorage.getItem("lastMovementDate") || todayISO();
 }
 
 function updateCategoryOptions() {
-  const type = el("type").value;
   const category = el("category");
   category.innerHTML = "";
 
-  categoriesByType[type].forEach((name) => {
+  categoryDefinitions.forEach((item) => {
     const option = document.createElement("option");
-    option.value = name;
-    option.textContent = name;
+    option.value = item.name;
+    option.textContent = item.type === "Inflow" ? `${item.name} · Entrada` : `${item.name} · Despesa`;
     category.appendChild(option);
   });
+
+  updateTypePreview();
+}
+
+function updateTypePreview() {
+  const type = inferTypeFromCategory(el("category").value);
+  const preview = el("typePreview");
+  preview.textContent = typeLabel(type);
+  preview.className = type === "Inflow" ? "positive" : "negative";
 }
 
 function showApp() {
@@ -108,6 +123,16 @@ function showPin() {
   el("app").classList.add("hidden");
   el("pinScreen").classList.remove("hidden");
   localStorage.removeItem("cashflowPinOk");
+}
+
+function setPage(page) {
+  activePage = page;
+
+  document.querySelectorAll(".page").forEach((section) => section.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach((button) => button.classList.remove("active"));
+
+  el(`${page}Page`).classList.add("active");
+  document.querySelector(`[data-page="${page}"]`).classList.add("active");
 }
 
 async function ensureAuth() {
@@ -146,7 +171,8 @@ async function addMovement(event) {
   event.preventDefault();
 
   const date = el("date").value;
-  const type = el("type").value;
+  const category = el("category").value;
+  const type = inferTypeFromCategory(category);
   const rawValue = Number(el("value").value);
   const amount = type === "Expenses" ? -Math.abs(rawValue) : Math.abs(rawValue);
   const { year, month } = getYearMonth(date);
@@ -154,7 +180,7 @@ async function addMovement(event) {
   await addDoc(collection(db, "movements"), {
     date,
     type,
-    category: el("category").value,
+    category,
     value: amount,
     description: el("description").value.trim(),
     year: Number(year),
@@ -164,12 +190,13 @@ async function addMovement(event) {
 
   localStorage.setItem("lastMovementDate", date);
 
-  // Mantém a data e limpa apenas o resto.
   const keptDate = date;
+  const keptCategory = category;
+
   el("movementForm").reset();
   el("date").value = keptDate;
-  el("type").value = type;
-  updateCategoryOptions();
+  el("category").value = keptCategory;
+  updateTypePreview();
   el("value").focus();
 }
 
@@ -179,10 +206,16 @@ async function removeMovement(id) {
   await deleteDoc(doc(db, "movements", id));
 }
 
-function getFilteredMovements() {
+function getDashboardMovements() {
   const selectedMonth = el("monthFilter").value;
   if (selectedMonth === "all") return movements;
   return movements.filter((movement) => movement.date?.startsWith(selectedMonth));
+}
+
+function getTableMovements() {
+  const selectedType = el("tableTypeFilter").value;
+  if (selectedType === "all") return movements;
+  return movements.filter((movement) => movement.type === selectedType);
 }
 
 function renderFilters() {
@@ -213,6 +246,25 @@ function renderCards(data) {
   el("movementCount").textContent = data.length;
 }
 
+function renderHome() {
+  const currentMonth = todayISO().slice(0, 7);
+  const currentMonthMovements = movements.filter((movement) => movement.date?.startsWith(currentMonth));
+  const monthBalance = currentMonthMovements.reduce((sum, movement) => sum + Number(movement.value || 0), 0);
+  const latest = [...movements].sort((a, b) => (b.date || "").localeCompare(a.date || ""))[0];
+
+  el("homeMonthBalance").textContent = formatMoney(monthBalance);
+  el("homeMonthBalance").className = monthBalance >= 0 ? "positive" : "negative";
+
+  if (latest) {
+    el("lastMovementValue").textContent = formatMoney(latest.value);
+    el("lastMovementValue").className = latest.value >= 0 ? "positive" : "negative";
+    el("lastMovementMeta").textContent = `${latest.date} · ${latest.category}`;
+  } else {
+    el("lastMovementValue").textContent = "—";
+    el("lastMovementMeta").textContent = "Ainda sem movimentos";
+  }
+}
+
 function renderSummary(containerId, rows, emptyText) {
   const container = el(containerId);
   container.innerHTML = "";
@@ -236,14 +288,55 @@ function renderSummary(containerId, rows, emptyText) {
   });
 }
 
+function renderBarChart(containerId, rows, emptyText) {
+  const container = el(containerId);
+  container.innerHTML = "";
+
+  if (!rows.length) {
+    container.innerHTML = `<p class="hint">${emptyText}</p>`;
+    return;
+  }
+
+  const max = Math.max(...rows.map((row) => Math.abs(row.value)), 1);
+
+  rows.forEach((row) => {
+    const pct = Math.max(4, Math.round((Math.abs(row.value) / max) * 100));
+    const div = document.createElement("div");
+    div.className = "chart-row";
+    div.innerHTML = `
+      <div class="chart-row-top">
+        <span>${row.label}</span>
+        <strong class="${row.value >= 0 ? "positive" : "negative"}">${formatMoney(row.value)}</strong>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill ${row.value >= 0 ? "positive-fill" : "negative-fill"}" style="width: ${pct}%"></div>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
 function renderDashboard(data) {
   const byCategory = {};
+  const byExpenseCategory = {};
   const byMonth = {};
+  const monthlyInOut = {};
 
   data.forEach((movement) => {
-    byCategory[movement.category] = (byCategory[movement.category] || 0) + Number(movement.value || 0);
-    const key = (movement.date || "").slice(0, 7) || "Sem mês";
-    byMonth[key] = (byMonth[key] || 0) + Number(movement.value || 0);
+    const value = Number(movement.value || 0);
+    const category = movement.category || "Sem categoria";
+    const monthKey = (movement.date || "").slice(0, 7) || "Sem mês";
+
+    byCategory[category] = (byCategory[category] || 0) + value;
+    byMonth[monthKey] = (byMonth[monthKey] || 0) + value;
+
+    if (value < 0) {
+      byExpenseCategory[category] = (byExpenseCategory[category] || 0) + value;
+    }
+
+    if (!monthlyInOut[monthKey]) monthlyInOut[monthKey] = { inflow: 0, expenses: 0 };
+    if (value >= 0) monthlyInOut[monthKey].inflow += value;
+    else monthlyInOut[monthKey].expenses += value;
   });
 
   const categoryRows = Object.entries(byCategory)
@@ -257,8 +350,26 @@ function renderDashboard(data) {
     }))
     .sort((a, b) => b.label.localeCompare(a.label));
 
+  const expenseCategoryRows = Object.entries(byExpenseCategory)
+    .map(([label, value]) => ({ label, value }))
+    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
+    .slice(0, 8);
+
+  const monthlyRows = Object.entries(monthlyInOut)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .flatMap(([key, values]) => {
+      const label = key === "Sem mês" ? key : monthLabel(`${key}-01`);
+      return [
+        { label: `${label} · Entradas`, value: values.inflow },
+        { label: `${label} · Despesas`, value: values.expenses }
+      ];
+    })
+    .slice(-12);
+
   renderSummary("categorySummary", categoryRows, "Ainda não há dados para apresentar.");
   renderSummary("monthSummary", monthRows, "Ainda não há dados para apresentar.");
+  renderBarChart("expenseCategoryChart", expenseCategoryRows, "Ainda não há despesas para apresentar.");
+  renderBarChart("monthlyChart", monthlyRows, "Ainda não há dados para apresentar.");
 }
 
 function renderTable(data) {
@@ -278,7 +389,7 @@ function renderTable(data) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${movement.date || ""}</td>
-      <td>${movement.type === "Expenses" ? "Despesa" : "Entrada"}</td>
+      <td>${typeLabel(movement.type)}</td>
       <td>${movement.category || ""}</td>
       <td>${movement.description || ""}</td>
       <td class="right ${movement.value >= 0 ? "positive" : "negative"}">${formatMoney(movement.value)}</td>
@@ -294,14 +405,16 @@ function renderTable(data) {
 
 function render() {
   renderFilters();
-  const data = getFilteredMovements();
-  renderCards(data);
-  renderDashboard(data);
-  renderTable(data);
+  renderHome();
+
+  const dashboardData = getDashboardMovements();
+  renderCards(dashboardData);
+  renderDashboard(dashboardData);
+  renderTable(getTableMovements());
 }
 
 function exportCSV() {
-  const data = getFilteredMovements();
+  const data = getTableMovements();
   const header = ["Data", "Tipo", "Categoria", "Descrição", "Valor"];
   const rows = data.map((m) => [
     m.date,
@@ -349,10 +462,15 @@ el("pinForm").addEventListener("submit", async (event) => {
   }
 });
 
+document.querySelectorAll("[data-page]").forEach((button) => {
+  button.addEventListener("click", () => setPage(button.dataset.page));
+});
+
 el("logoutBtn").addEventListener("click", showPin);
-el("type").addEventListener("change", updateCategoryOptions);
+el("category").addEventListener("change", updateTypePreview);
 el("movementForm").addEventListener("submit", addMovement);
 el("monthFilter").addEventListener("change", render);
+el("tableTypeFilter").addEventListener("change", render);
 el("exportBtn").addEventListener("click", exportCSV);
 el("refreshBtn").addEventListener("click", manualRefresh);
 
