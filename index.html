@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cashflow Arch</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div id="pinScreen" class="pin-screen">
+    <div class="pin-card">
+      <h1>Cashflow Arch</h1>
+      <p>Introduz o PIN para aceder.</p>
+      <form id="pinForm">
+        <input id="pinInput" type="password" inputmode="numeric" placeholder="PIN" autocomplete="off" />
+        <button type="submit">Entrar</button>
+      </form>
+      <p id="pinError" class="error hidden">PIN incorrecto.</p>
+    </div>
+  </div>
+
+  <main id="app" class="app hidden">
+    <header class="topbar">
+      <div>
+        <h1>Cashflow Arch</h1>
+        <p>Registo simples de despesas e entradas</p>
+      </div>
+      <button id="logoutBtn" class="secondary">Bloquear</button>
+    </header>
+
+    <section class="grid cards">
+      <article class="card">
+        <span class="label">Entradas</span>
+        <strong id="totalInflow">0,00 €</strong>
+      </article>
+      <article class="card">
+        <span class="label">Despesas</span>
+        <strong id="totalExpenses">0,00 €</strong>
+      </article>
+      <article class="card">
+        <span class="label">Saldo</span>
+        <strong id="balance">0,00 €</strong>
+      </article>
+      <article class="card">
+        <span class="label">Movimentos</span>
+        <strong id="movementCount">0</strong>
+      </article>
+    </section>
+
+    <section class="layout">
+      <article class="panel">
+        <h2>Novo movimento</h2>
+        <form id="movementForm" class="form">
+          <label>
+            Data
+            <input id="date" type="date" required />
+          </label>
+
+          <label>
+            Tipo
+            <select id="type" required>
+              <option value="Expenses">Despesa</option>
+              <option value="Inflow">Entrada</option>
+            </select>
+          </label>
+
+          <label>
+            Categoria
+            <select id="category" required></select>
+          </label>
+
+          <label>
+            Valor (€)
+            <input id="value" type="number" step="0.01" min="0" placeholder="Ex: 12.50" required />
+          </label>
+
+          <label class="full">
+            Descrição
+            <input id="description" type="text" placeholder="Opcional" />
+          </label>
+
+          <button type="submit" class="full">Guardar</button>
+        </form>
+        <p class="hint">A data fica mantida depois de gravares um movimento.</p>
+      </article>
+
+      <article class="panel">
+        <div class="panel-header">
+          <h2>Dashboard</h2>
+          <select id="monthFilter">
+            <option value="all">Todos os meses</option>
+          </select>
+        </div>
+
+        <h3>Por categoria</h3>
+        <div id="categorySummary" class="summary-list"></div>
+
+        <h3>Por mês</h3>
+        <div id="monthSummary" class="summary-list"></div>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Movimentos</h2>
+        <div class="actions">
+          <button id="exportBtn" class="secondary">Exportar CSV</button>
+          <button id="refreshBtn" class="secondary">Actualizar</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Tipo</th>
+              <th>Categoria</th>
+              <th>Descrição</th>
+              <th class="right">Valor</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="movementsTable"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
