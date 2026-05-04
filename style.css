@@ -1263,3 +1263,60 @@ canvas {
 .modal-backdrop:not(.hidden) {
   display: grid !important;
 }
+
+
+/* v15 final fixes: clean category modal + clickable gear + no old category panel */
+.category-manager {
+  display: none !important;
+}
+
+.submit-form .category-field {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 54px !important;
+  gap: 10px !important;
+  align-items: end !important;
+}
+
+.submit-form .category-field label {
+  min-width: 0 !important;
+}
+
+#openCategoriesBtn {
+  display: inline-grid !important;
+  place-items: center !important;
+  width: 54px !important;
+  height: 56px !important;
+  min-width: 54px !important;
+  padding: 0 !important;
+  border-radius: 14px !important;
+  border: 1px solid var(--border) !important;
+  background: var(--soft) !important;
+  color: var(--text) !important;
+  font-size: 20px !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+}
+
+.modal-backdrop:not(.hidden) {
+  display: grid !important;
+}
+
+.account-balance-card strong,
+#accountBalance,
+.account-balance-card #accountBalance.positive,
+.account-balance-card #accountBalance.negative {
+  color: #ffffff !important;
+}
+
+@media (max-width: 760px) {
+  .submit-form .category-field {
+    grid-template-columns: minmax(0, 1fr) 48px !important;
+  }
+
+  #openCategoriesBtn {
+    width: 48px !important;
+    height: 50px !important;
+    min-width: 48px !important;
+  }
+}

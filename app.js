@@ -240,28 +240,7 @@ function mergeCategories() {
   });
 
   refreshCategoryMap();
-  
-document.addEventListener("click", (event) => {
-  const openBtn = event.target.closest("#openCategoriesBtn");
-  if (openBtn) {
-    event.preventDefault();
-    openCategoryModal();
-    return;
-  }
-
-  const closeBtn = event.target.closest("#closeCategoriesBtn");
-  if (closeBtn) {
-    event.preventDefault();
-    closeCategoryModal();
-    return;
-  }
-
-  if (event.target.id === "categoryModal") {
-    closeCategoryModal();
-  }
-});
-
-updateCategoryOptions();
+  updateCategoryOptions();
   renderCategoryList();
 }
 
