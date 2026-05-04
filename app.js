@@ -10,7 +10,9 @@ import {
   onSnapshot,
   query,
   orderBy,
-  serverTimestamp
+  serverTimestamp,
+  setDoc,
+  updateDoc
 } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -25,25 +27,27 @@ const firebaseConfig = {
 
 const PIN = "1906";
 
-const categoryDefinitions = [
-  { name: "Sales B2B", type: "Inflow" },
-  { name: "Sales B2C", type: "Inflow" },
-  { name: "Other Inflow", type: "Inflow" },
+const defaultCategoryDefinitions = [
+  { name: "Sales B2B", type: "Inflow", source: "default" },
+  { name: "Sales B2C", type: "Inflow", source: "default" },
+  { name: "Other Inflow", type: "Inflow", source: "default" },
 
-  { name: "Software Subscriptions", type: "Expenses" },
-  { name: "Stock Order", type: "Expenses" },
-  { name: "Shipping", type: "Expenses" },
-  { name: "IVAT", type: "Expenses" },
-  { name: "Tributação Autónoma", type: "Expenses" },
-  { name: "IRC", type: "Expenses" },
-  { name: "Office Supplies", type: "Expenses" },
-  { name: "Delivery Supplies", type: "Expenses" },
-  { name: "Samples", type: "Expenses" },
-  { name: "Tasting", type: "Expenses" },
-  { name: "Other Expense", type: "Expenses" }
+  { name: "Software Subscriptions", type: "Expenses", source: "default" },
+  { name: "Stock Order", type: "Expenses", source: "default" },
+  { name: "Shipping", type: "Expenses", source: "default" },
+  { name: "IVAT", type: "Expenses", source: "default" },
+  { name: "Tributação Autónoma", type: "Expenses", source: "default" },
+  { name: "IRC", type: "Expenses", source: "default" },
+  { name: "Office Supplies", type: "Expenses", source: "default" },
+  { name: "Delivery Supplies", type: "Expenses", source: "default" },
+  { name: "Samples", type: "Expenses", source: "default" },
+  { name: "Tasting", type: "Expenses", source: "default" },
+  { name: "Other Expense", type: "Expenses", source: "default" }
 ];
 
-const categoryTypeByName = Object.fromEntries(categoryDefinitions.map((item) => [item.name, item.type]));
+let categoryDefinitions = [...defaultCategoryDefinitions];
+let customCategories = [];
+let categoryTypeByName = Object.fromEntries(categoryDefinitions.map((item) => [item.name, item.type]));
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -53,6 +57,8 @@ const el = (id) => document.getElementById(id);
 
 let movements = [];
 let unsubscribe = null;
+let unsubscribeCategories = null;
+let editingMovementId = null;
 let selectedYears = new Set(["all"]);
 let selectedMonths = new Set(["all"]);
 
@@ -104,16 +110,38 @@ function setDefaultDate() {
   el("date").value = localStorage.getItem("lastMovementDate") || todayISO();
 }
 
+function refreshCategoryMap() {
+  categoryTypeByName = Object.fromEntries(categoryDefinitions.map((item) => [item.name, item.type]));
+}
+
 function updateCategoryOptions() {
   const category = el("category");
+  const current = category.value;
   category.innerHTML = "";
 
-  categoryDefinitions.forEach((item) => {
-    const option = document.createElement("option");
-    option.value = item.name;
-    option.textContent = item.type === "Inflow" ? `${item.name} · Entrada` : `${item.name} · Despesa`;
-    category.appendChild(option);
+  const inflow = categoryDefinitions.filter((item) => item.type === "Inflow").sort((a, b) => a.name.localeCompare(b.name));
+  const expenses = categoryDefinitions.filter((item) => item.type === "Expenses").sort((a, b) => a.name.localeCompare(b.name));
+
+  [
+    { label: "Entradas", items: inflow },
+    { label: "Despesas", items: expenses }
+  ].forEach((group) => {
+    const optgroup = document.createElement("optgroup");
+    optgroup.label = group.label;
+
+    group.items.forEach((item) => {
+      const option = document.createElement("option");
+      option.value = item.name;
+      option.textContent = item.name;
+      optgroup.appendChild(option);
+    });
+
+    category.appendChild(optgroup);
   });
+
+  if ([...category.querySelectorAll("option")].some((option) => option.value === current)) {
+    category.value = current;
+  }
 
   updateTypePreview();
 }
@@ -172,6 +200,126 @@ function subscribeMovements() {
   });
 }
 
+function slugifyCategory(name) {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 80);
+}
+
+function mergeCategories() {
+  const map = new Map();
+
+  defaultCategoryDefinitions.forEach((item) => {
+    map.set(item.name.toLowerCase(), item);
+  });
+
+  customCategories.forEach((item) => {
+    map.set(item.name.toLowerCase(), item);
+  });
+
+  categoryDefinitions = [...map.values()].sort((a, b) => {
+    if (a.type !== b.type) return a.type === "Inflow" ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
+
+  refreshCategoryMap();
+  updateCategoryOptions();
+  renderCategoryList();
+}
+
+function subscribeCategories() {
+  if (unsubscribeCategories) unsubscribeCategories();
+
+  const q = query(collection(db, "categories"), orderBy("name", "asc"));
+  unsubscribeCategories = onSnapshot(q, (snapshot) => {
+    customCategories = snapshot.docs.map((item) => ({
+      id: item.id,
+      ...item.data(),
+      source: "custom"
+    }));
+    mergeCategories();
+    render();
+  }, (error) => {
+    alert("Erro ao ler categorias do Firestore: " + error.message);
+  });
+}
+
+async function addCategory(event) {
+  event.preventDefault();
+
+  const name = el("newCategoryName").value.trim();
+  const type = el("newCategoryType").value;
+
+  if (!name) return;
+
+  const exists = categoryDefinitions.some((item) => item.name.toLowerCase() === name.toLowerCase());
+  if (exists) {
+    alert("Essa categoria já existe.");
+    return;
+  }
+
+  const id = slugifyCategory(name) || `category_${Date.now()}`;
+
+  await setDoc(doc(db, "categories", id), {
+    name,
+    type,
+    createdAt: serverTimestamp()
+  });
+
+  el("categoryForm").reset();
+  el("newCategoryType").value = "Expenses";
+}
+
+async function removeCategory(id, name) {
+  const used = movements.some((movement) => movement.category === name);
+  if (used) {
+    alert("Esta categoria já está a ser usada em movimentos. Para evitar inconsistências, não pode ser apagada.");
+    return;
+  }
+
+  const ok = confirm(`Apagar a categoria "${name}"?`);
+  if (!ok) return;
+
+  await deleteDoc(doc(db, "categories", id));
+}
+
+function renderCategoryList() {
+  const container = el("categoryList");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  const rows = categoryDefinitions
+    .filter((item) => item.source === "custom")
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  if (!rows.length) {
+    container.innerHTML = `<p class="hint">Ainda não criaste categorias novas.</p>`;
+    return;
+  }
+
+  rows.forEach((item) => {
+    const div = document.createElement("div");
+    div.className = "category-pill";
+    div.innerHTML = `
+      <div>
+        <strong>${item.name}</strong>
+        <small>${typeLabel(item.type)}</small>
+      </div>
+      <button class="danger" data-category-delete-id="${item.id}" data-category-name="${item.name}">Apagar</button>
+    `;
+    container.appendChild(div);
+  });
+
+  document.querySelectorAll("[data-category-delete-id]").forEach((button) => {
+    button.addEventListener("click", () => removeCategory(button.dataset.categoryDeleteId, button.dataset.categoryName));
+  });
+}
+
 async function addMovement(event) {
   event.preventDefault();
 
@@ -182,7 +330,7 @@ async function addMovement(event) {
   const amount = type === "Expenses" ? -Math.abs(rawValue) : Math.abs(rawValue);
   const { year, month } = getYearMonth(date);
 
-  await addDoc(collection(db, "movements"), {
+  const payload = {
     date,
     type,
     category,
@@ -190,19 +338,60 @@ async function addMovement(event) {
     description: el("description").value.trim(),
     year: Number(year),
     month: Number(month),
-    createdAt: serverTimestamp()
-  });
+    updatedAt: serverTimestamp()
+  };
 
-  localStorage.setItem("lastMovementDate", date);
+  if (editingMovementId) {
+    await updateDoc(doc(db, "movements", editingMovementId), payload);
+    stopEditing();
+  } else {
+    await addDoc(collection(db, "movements"), {
+      ...payload,
+      createdAt: serverTimestamp()
+    });
 
-  const keptDate = date;
-  const keptCategory = category;
+    localStorage.setItem("lastMovementDate", date);
+
+    const keptDate = date;
+    const keptCategory = category;
+
+    el("movementForm").reset();
+    el("date").value = keptDate;
+    el("category").value = keptCategory;
+    updateTypePreview();
+    el("value").focus();
+  }
+}
+
+function startEditingMovement(id) {
+  const movement = movements.find((item) => item.id === id);
+  if (!movement) return;
+
+  editingMovementId = id;
+
+  el("date").value = movement.date || todayISO();
+  el("category").value = movement.category || categoryDefinitions[0]?.name || "";
+  el("value").value = Math.abs(Number(movement.value || 0));
+  el("description").value = movement.description || "";
+
+  updateTypePreview();
+
+  el("editNotice").classList.remove("hidden");
+  el("submitMovementBtn").textContent = "Guardar alterações";
+
+  setPage("home");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function stopEditing() {
+  editingMovementId = null;
 
   el("movementForm").reset();
-  el("date").value = keptDate;
-  el("category").value = keptCategory;
-  updateTypePreview();
-  el("value").focus();
+  setDefaultDate();
+  updateCategoryOptions();
+
+  el("editNotice").classList.add("hidden");
+  el("submitMovementBtn").textContent = "Guardar movimento";
 }
 
 async function removeMovement(id) {
@@ -421,33 +610,11 @@ function renderSummary(containerId, rows, emptyText, absoluteValues = false) {
   });
 }
 
-function setupCanvas(canvas) {
-  const ratio = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  const width = Math.max(320, rect.width || canvas.parentElement.clientWidth || 320);
-  const height = Number(canvas.getAttribute("height")) || 260;
-
-  canvas.width = width * ratio;
-  canvas.height = height * ratio;
-  canvas.style.height = `${height}px`;
-
-  const ctx = canvas.getContext("2d");
-  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-  return { ctx, width, height };
-}
-
-function drawEmptyCanvas(canvas, text) {
-  const { ctx, width, height } = setupCanvas(canvas);
-  ctx.clearRect(0, 0, width, height);
-  ctx.fillStyle = "#667085";
-  ctx.font = "14px system-ui";
-  ctx.textAlign = "center";
-  ctx.fillText(text, width / 2, height / 2);
-}
-
-function drawDonut(canvasId, legendId, rows, emptyText) {
-  const canvas = el(canvasId);
+function renderCssDonut(chartId, legendId, rows, emptyText) {
+  const chart = el(chartId);
   const legend = el(legendId);
+
+  chart.innerHTML = "";
   legend.innerHTML = "";
 
   const cleanRows = rows
@@ -458,39 +625,29 @@ function drawDonut(canvasId, legendId, rows, emptyText) {
   const total = cleanRows.reduce((sum, row) => sum + row.value, 0);
 
   if (!cleanRows.length || total === 0) {
-    drawEmptyCanvas(canvas, emptyText);
+    chart.className = "donut-chart empty";
+    chart.innerHTML = `<span>${emptyText}</span>`;
     legend.innerHTML = `<p class="hint">${emptyText}</p>`;
     return;
   }
 
-  const { ctx, width, height } = setupCanvas(canvas);
-  ctx.clearRect(0, 0, width, height);
+  chart.className = "donut-chart";
 
-  const cx = width / 2;
-  const cy = height / 2;
-  const radius = Math.min(width, height) * 0.34;
-  const innerRadius = radius * 0.58;
-
-  let start = -Math.PI / 2;
-
-  cleanRows.forEach((row, index) => {
-    const angle = (row.value / total) * Math.PI * 2;
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius, start, start + angle);
-    ctx.arc(cx, cy, innerRadius, start + angle, start, true);
-    ctx.closePath();
-    ctx.fillStyle = palette[index % palette.length];
-    ctx.fill();
-    start += angle;
+  let cursor = 0;
+  const segments = cleanRows.map((row, index) => {
+    const start = cursor;
+    const end = cursor + (row.value / total) * 100;
+    cursor = end;
+    const color = palette[index % palette.length];
+    return `${color} ${start}% ${end}%`;
   });
 
-  ctx.fillStyle = "#071936";
-  ctx.font = "700 18px system-ui";
-  ctx.textAlign = "center";
-  ctx.fillText(formatMoney(total), cx, cy - 2);
-  ctx.fillStyle = "#667085";
-  ctx.font = "12px system-ui";
-  ctx.fillText("total", cx, cy + 18);
+  chart.style.background = `conic-gradient(${segments.join(", ")})`;
+
+  const center = document.createElement("div");
+  center.className = "donut-center";
+  center.innerHTML = `<strong>${formatMoney(total)}</strong><small>total</small>`;
+  chart.appendChild(center);
 
   cleanRows.forEach((row, index) => {
     const pct = Math.round((row.value / total) * 100);
@@ -511,8 +668,8 @@ function renderDashboard(data) {
 
   renderInsights(data);
 
-  drawDonut("expenseDonutCanvas", "expenseDonutLegend", expenseRows, "Sem despesas no período.");
-  drawDonut("inflowDonutCanvas", "inflowDonutLegend", inflowRows, "Sem entradas no período.");
+  renderCssDonut("expenseDonutChart", "expenseDonutLegend", expenseRows, "Sem despesas no período.");
+  renderCssDonut("inflowDonutChart", "inflowDonutLegend", inflowRows, "Sem entradas no período.");
 
   renderSummary("expenseCategoriesTable", expenseRows, "Ainda não há despesas para apresentar.", true);
 }
@@ -553,9 +710,16 @@ function renderTable(data) {
       <td>${movement.category || ""}</td>
       <td>${movement.description || ""}</td>
       <td class="right ${movement.value >= 0 ? "positive" : "negative"}">${formatMoney(movement.value)}</td>
-      <td class="right"><button class="danger" data-delete-id="${movement.id}">Apagar</button></td>
+      <td class="right row-actions">
+        <button class="secondary" data-edit-id="${movement.id}">Editar</button>
+        <button class="danger" data-delete-id="${movement.id}">Apagar</button>
+      </td>
     `;
     tbody.appendChild(tr);
+  });
+
+  document.querySelectorAll("[data-edit-id]").forEach((button) => {
+    button.addEventListener("click", () => startEditingMovement(button.dataset.editId));
   });
 
   document.querySelectorAll("[data-delete-id]").forEach((button) => {
@@ -576,8 +740,8 @@ function render() {
   const expenseRows = groupByCategory(dashboardData, (m) => Number(m.value) < 0);
   const inflowRows = groupByCategory(dashboardData, (m) => Number(m.value) > 0);
 
-  drawDonut("expenseDonutCanvas", "expenseDonutLegend", expenseRows, "Sem despesas no período.");
-  drawDonut("inflowDonutCanvas", "inflowDonutLegend", inflowRows, "Sem entradas no período.");
+  renderCssDonut("expenseDonutChart", "expenseDonutLegend", expenseRows, "Sem despesas no período.");
+  renderCssDonut("inflowDonutChart", "inflowDonutLegend", inflowRows, "Sem entradas no período.");
 
   renderSummary("expenseCategoriesTable", expenseRows, "Ainda não há despesas para apresentar.", true);
   renderSummary("inflowCategoriesTable", inflowRows, "Ainda não há entradas para apresentar.", false);
@@ -629,6 +793,7 @@ el("pinForm").addEventListener("submit", async (event) => {
   try {
     await ensureAuth();
     subscribeMovements();
+    subscribeCategories();
   } catch (error) {
     alert("Erro na autenticação anónima: " + error.message);
   }
@@ -641,19 +806,22 @@ document.querySelectorAll("[data-page]").forEach((button) => {
 el("logoutBtn").addEventListener("click", showPin);
 el("category").addEventListener("change", updateTypePreview);
 el("movementForm").addEventListener("submit", addMovement);
+el("categoryForm").addEventListener("submit", addCategory);
+el("cancelEditBtn").addEventListener("click", stopEditing);
 el("tableTypeFilter").addEventListener("change", render);
 el("tableCategoryFilter").addEventListener("change", render);
 el("exportBtn").addEventListener("click", exportCSV);
 el("refreshBtn").addEventListener("click", manualRefresh);
-
-window.addEventListener("resize", () => render());
 
 updateCategoryOptions();
 setDefaultDate();
 
 if (localStorage.getItem("cashflowPinOk") === "true") {
   showApp();
-  ensureAuth().then(subscribeMovements).catch((error) => {
+  ensureAuth().then(() => {
+    subscribeMovements();
+    subscribeCategories();
+  }).catch((error) => {
     alert("Erro na autenticação anónima: " + error.message);
   });
 }

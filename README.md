@@ -1,7 +1,8 @@
 # Cashflow Arch
 
-Versão 6:
-- Página Movimentos com saldo total da conta bancária
-- Filtro por categoria na tabela de movimentos
-- Export CSV respeita filtro por tipo e categoria
-- Mantém melhorias mobile
+Versão 9:
+- Corrige definitivamente o crescimento de espaço no dashboard mobile
+- Substitui canvas por gráficos donut em CSS estáveis
+- Mantém edição de movimentos
+- Mantém criação de categorias
+- Mantém filtros multi-ano e multi-mês

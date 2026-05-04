@@ -68,7 +68,12 @@
             <input id="description" type="text" placeholder="Opcional" />
           </label>
 
-          <button type="submit" class="full primary-large">Guardar movimento</button>
+          <div id="editNotice" class="edit-notice full hidden">
+            <span>A editar movimento existente</span>
+            <button id="cancelEditBtn" type="button" class="secondary">Cancelar edição</button>
+          </div>
+
+          <button id="submitMovementBtn" type="submit" class="full primary-large">Guardar movimento</button>
         </form>
 
         <p class="hint">A data fica mantida depois de gravares. Só o valor e a descrição são limpos.</p>
@@ -86,6 +91,26 @@
           <small id="lastMovementMeta">Ainda sem movimentos</small>
         </article>
       </section>
+
+      <article class="panel category-manager">
+        <div class="panel-title">
+          <div>
+            <h3>Categorias</h3>
+            <p>Cria novas categorias e define se são despesas ou entradas.</p>
+          </div>
+        </div>
+
+        <form id="categoryForm" class="category-form">
+          <input id="newCategoryName" type="text" placeholder="Nova categoria" required />
+          <select id="newCategoryType">
+            <option value="Expenses">Despesa</option>
+            <option value="Inflow">Entrada</option>
+          </select>
+          <button type="submit">Adicionar categoria</button>
+        </form>
+
+        <div id="categoryList" class="category-list"></div>
+      </article>
     </section>
 
     <section id="dashboardPage" class="page">
@@ -164,7 +189,7 @@
               <p>Distribuição das despesas no período seleccionado.</p>
             </div>
           </div>
-          <canvas id="expenseDonutCanvas" height="240"></canvas>
+          <div id="expenseDonutChart" class="donut-chart"></div>
           <div id="expenseDonutLegend" class="legend"></div>
         </article>
 
@@ -175,7 +200,7 @@
               <p>Distribuição das entradas no período seleccionado.</p>
             </div>
           </div>
-          <canvas id="inflowDonutCanvas" height="240"></canvas>
+          <div id="inflowDonutChart" class="donut-chart"></div>
           <div id="inflowDonutLegend" class="legend"></div>
         </article>
       </section>
