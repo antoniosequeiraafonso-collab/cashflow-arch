@@ -93,23 +93,27 @@
         <div>
           <span class="eyebrow">Dashboard</span>
           <h2>Visão financeira</h2>
-          <p>Analisa despesas, entradas, saldo e evolução mensal.</p>
-        </div>
-
-        <div class="filter-card">
-          <label>
-            Ano
-            <select id="yearFilter"></select>
-          </label>
-
-          <label>
-            Mês
-            <select id="monthFilter">
-              <option value="all">Ano completo</option>
-            </select>
-          </label>
+          <p>Filtra por vários anos e meses. O dashboard agrega apenas o período seleccionado.</p>
         </div>
       </div>
+
+      <section class="filter-panel">
+        <div class="filter-group">
+          <div class="filter-title">
+            <strong>Anos</strong>
+            <small>Clica para seleccionar vários anos</small>
+          </div>
+          <div id="yearChips" class="chip-list"></div>
+        </div>
+
+        <div class="filter-group">
+          <div class="filter-title">
+            <strong>Meses</strong>
+            <small>Clica para seleccionar vários meses</small>
+          </div>
+          <div id="monthChips" class="chip-list"></div>
+        </div>
+      </section>
 
       <section class="grid cards dashboard-kpis">
         <article class="card">
@@ -152,17 +156,7 @@
         </article>
       </section>
 
-      <section class="chart-grid">
-        <article class="panel large-chart">
-          <div class="panel-title">
-            <div>
-              <h3>Cashflow mensal</h3>
-              <p>Entradas, despesas e saldo por mês.</p>
-            </div>
-          </div>
-          <canvas id="cashflowCanvas" height="260"></canvas>
-        </article>
-
+      <section class="donut-grid">
         <article class="panel">
           <div class="panel-title">
             <div>
@@ -170,43 +164,41 @@
               <p>Distribuição das despesas no período seleccionado.</p>
             </div>
           </div>
-          <canvas id="expenseDonutCanvas" height="260"></canvas>
+          <canvas id="expenseDonutCanvas" height="280"></canvas>
           <div id="expenseDonutLegend" class="legend"></div>
         </article>
-      </section>
 
-      <section class="chart-grid">
         <article class="panel">
           <div class="panel-title">
             <div>
               <h3>Entradas por categoria</h3>
-              <p>Origem das entradas no período seleccionado.</p>
+              <p>Distribuição das entradas no período seleccionado.</p>
             </div>
           </div>
-          <canvas id="inflowDonutCanvas" height="240"></canvas>
+          <canvas id="inflowDonutCanvas" height="280"></canvas>
           <div id="inflowDonutLegend" class="legend"></div>
+        </article>
+      </section>
+
+      <section class="tables-grid">
+        <article class="panel">
+          <div class="panel-title">
+            <div>
+              <h3>Principais categorias de despesas</h3>
+              <p>Valores absolutos, ordenados da maior para a menor despesa.</p>
+            </div>
+          </div>
+          <div id="expenseCategoriesTable" class="summary-list"></div>
         </article>
 
         <article class="panel">
           <div class="panel-title">
             <div>
-              <h3>Saldo acumulado</h3>
-              <p>Evolução acumulada ao longo do ano.</p>
+              <h3>Principais categorias de entradas</h3>
+              <p>Valores ordenados da maior para a menor entrada.</p>
             </div>
           </div>
-          <canvas id="cumulativeCanvas" height="240"></canvas>
-        </article>
-      </section>
-
-      <section class="dashboard-grid">
-        <article class="panel">
-          <h3>Top despesas</h3>
-          <div id="topExpensesList" class="summary-list"></div>
-        </article>
-
-        <article class="panel">
-          <h3>Resumo por categoria</h3>
-          <div id="categorySummary" class="summary-list"></div>
+          <div id="inflowCategoriesTable" class="summary-list"></div>
         </article>
       </section>
     </section>

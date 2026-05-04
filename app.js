@@ -53,8 +53,25 @@ const el = (id) => document.getElementById(id);
 
 let movements = [];
 let unsubscribe = null;
+let selectedYears = new Set(["all"]);
+let selectedMonths = new Set(["all"]);
 
 const palette = ["#071936", "#175cd3", "#067647", "#b42318", "#b54708", "#7f56d9", "#0e9384", "#c11574", "#344054", "#475467", "#2970ff", "#039855"];
+
+const monthNames = [
+  { value: "01", label: "Jan" },
+  { value: "02", label: "Fev" },
+  { value: "03", label: "Mar" },
+  { value: "04", label: "Abr" },
+  { value: "05", label: "Mai" },
+  { value: "06", label: "Jun" },
+  { value: "07", label: "Jul" },
+  { value: "08", label: "Ago" },
+  { value: "09", label: "Set" },
+  { value: "10", label: "Out" },
+  { value: "11", label: "Nov" },
+  { value: "12", label: "Dez" }
+];
 
 const currency = new Intl.NumberFormat("pt-PT", {
   style: "currency",
@@ -73,17 +90,6 @@ function getYearMonth(dateString) {
   if (!dateString) return { year: "", month: "" };
   const [year, month] = dateString.split("-");
   return { year, month };
-}
-
-function monthLabelFromNumber(monthNumber) {
-  const date = new Date(`2026-${String(monthNumber).padStart(2, "0")}-01T00:00:00`);
-  return date.toLocaleDateString("pt-PT", { month: "long" });
-}
-
-function monthLabel(dateString) {
-  if (!dateString) return "Sem mês";
-  const date = new Date(`${dateString}T00:00:00`);
-  return date.toLocaleDateString("pt-PT", { year: "numeric", month: "long" });
 }
 
 function typeLabel(type) {
@@ -138,21 +144,15 @@ function setPage(page) {
   el(`${page}Page`).classList.add("active");
   document.querySelector(`[data-page="${page}"]`).classList.add("active");
 
-  if (page === "dashboard") {
-    setTimeout(render, 30);
-  }
+  if (page === "dashboard") setTimeout(render, 30);
 }
 
 async function ensureAuth() {
   return new Promise((resolve, reject) => {
     onAuthStateChanged(auth, async (user) => {
       try {
-        if (user) {
-          resolve(user);
-        } else {
-          const result = await signInAnonymously(auth);
-          resolve(result.user);
-        }
+        if (user) resolve(user);
+        else resolve((await signInAnonymously(auth)).user);
       } catch (error) {
         reject(error);
       }
@@ -165,10 +165,7 @@ function subscribeMovements() {
 
   const q = query(collection(db, "movements"), orderBy("date", "desc"));
   unsubscribe = onSnapshot(q, (snapshot) => {
-    movements = snapshot.docs.map((item) => ({
-      id: item.id,
-      ...item.data()
-    }));
+    movements = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
     render();
   }, (error) => {
     alert("Erro ao ler dados do Firestore: " + error.message);
@@ -216,56 +213,69 @@ async function removeMovement(id) {
 
 function getAvailableYears() {
   const years = [...new Set(movements.map((m) => Number(m.year || (m.date || "").slice(0, 4))).filter(Boolean))].sort((a, b) => b - a);
-  const currentYear = new Date().getFullYear();
-  return years.length ? years : [currentYear];
+  return years.length ? years : [new Date().getFullYear()];
 }
 
-function renderPeriodFilters() {
-  const yearSelect = el("yearFilter");
-  const monthSelect = el("monthFilter");
-  const currentYear = yearSelect.value || String(getAvailableYears()[0]);
-  const currentMonth = monthSelect.value || "all";
+function toggleSelection(set, value) {
+  if (value === "all") {
+    set.clear();
+    set.add("all");
+    return;
+  }
 
-  yearSelect.innerHTML = "";
-  getAvailableYears().forEach((year) => {
-    const option = document.createElement("option");
-    option.value = String(year);
-    option.textContent = String(year);
-    yearSelect.appendChild(option);
+  if (set.has("all")) set.clear();
+
+  if (set.has(value)) set.delete(value);
+  else set.add(value);
+
+  if (set.size === 0) set.add("all");
+}
+
+function renderChips() {
+  const years = getAvailableYears();
+
+  if (![...selectedYears].every((year) => year === "all" || years.includes(Number(year)))) {
+    selectedYears = new Set(["all"]);
+  }
+
+  const yearChips = el("yearChips");
+  yearChips.innerHTML = "";
+  [{ value: "all", label: "Todos" }, ...years.map((year) => ({ value: String(year), label: String(year) }))].forEach((item) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = selectedYears.has(item.value) ? "chip active" : "chip";
+    button.textContent = item.label;
+    button.addEventListener("click", () => {
+      toggleSelection(selectedYears, item.value);
+      render();
+    });
+    yearChips.appendChild(button);
   });
 
-  if ([...yearSelect.options].some((option) => option.value === currentYear)) {
-    yearSelect.value = currentYear;
-  }
-
-  monthSelect.innerHTML = `<option value="all">Ano completo</option>`;
-  for (let month = 1; month <= 12; month++) {
-    const option = document.createElement("option");
-    option.value = String(month).padStart(2, "0");
-    option.textContent = monthLabelFromNumber(month);
-    monthSelect.appendChild(option);
-  }
-
-  if ([...monthSelect.options].some((option) => option.value === currentMonth)) {
-    monthSelect.value = currentMonth;
-  }
+  const monthChips = el("monthChips");
+  monthChips.innerHTML = "";
+  [{ value: "all", label: "Todos" }, ...monthNames].forEach((item) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = selectedMonths.has(item.value) ? "chip active" : "chip";
+    button.textContent = item.label;
+    button.addEventListener("click", () => {
+      toggleSelection(selectedMonths, item.value);
+      render();
+    });
+    monthChips.appendChild(button);
+  });
 }
 
 function getDashboardMovements() {
-  const selectedYear = el("yearFilter").value || String(getAvailableYears()[0]);
-  const selectedMonth = el("monthFilter").value;
-
   return movements.filter((movement) => {
     const date = movement.date || "";
-    const yearOk = date.startsWith(selectedYear);
-    const monthOk = selectedMonth === "all" || date.slice(5, 7) === selectedMonth;
+    const year = date.slice(0, 4);
+    const month = date.slice(5, 7);
+    const yearOk = selectedYears.has("all") || selectedYears.has(year);
+    const monthOk = selectedMonths.has("all") || selectedMonths.has(month);
     return yearOk && monthOk;
   });
-}
-
-function getYearMovements() {
-  const selectedYear = el("yearFilter").value || String(getAvailableYears()[0]);
-  return movements.filter((movement) => (movement.date || "").startsWith(selectedYear));
 }
 
 function getTableMovements() {
@@ -277,14 +287,15 @@ function getTableMovements() {
 function calculateTotals(data) {
   const inflow = data.filter((m) => Number(m.value) > 0).reduce((sum, m) => sum + Number(m.value), 0);
   const expenses = data.filter((m) => Number(m.value) < 0).reduce((sum, m) => sum + Number(m.value), 0);
-  const balance = inflow + expenses;
-  return { inflow, expenses, balance };
+  return { inflow, expenses, balance: inflow + expenses };
 }
 
 function renderCards(data) {
   const { inflow, expenses, balance } = calculateTotals(data);
-  const avgExpense = data.filter((m) => Number(m.value) < 0).length ? Math.abs(expenses) / data.filter((m) => Number(m.value) < 0).length : 0;
-  const avgInflow = data.filter((m) => Number(m.value) > 0).length ? inflow / data.filter((m) => Number(m.value) > 0).length : 0;
+  const expenseCount = data.filter((m) => Number(m.value) < 0).length;
+  const inflowCount = data.filter((m) => Number(m.value) > 0).length;
+  const avgExpense = expenseCount ? Math.abs(expenses) / expenseCount : 0;
+  const avgInflow = inflowCount ? inflow / inflowCount : 0;
 
   el("totalInflow").textContent = formatMoney(inflow);
   el("totalExpenses").textContent = formatMoney(Math.abs(expenses));
@@ -294,7 +305,7 @@ function renderCards(data) {
   el("inflowDetail").textContent = avgInflow ? `Média por entrada: ${formatMoney(avgInflow)}` : "Sem entradas no período";
   el("expensesDetail").textContent = avgExpense ? `Média por despesa: ${formatMoney(avgExpense)}` : "Sem despesas no período";
   el("balanceDetail").textContent = balance >= 0 ? "Período positivo" : "Período negativo";
-  el("movementDetail").textContent = data.length === 1 ? "1 movimento no período" : `${data.length} movimentos no período`;
+  el("movementDetail").textContent = `${data.length} movimentos no período`;
 }
 
 function renderHome() {
@@ -358,7 +369,7 @@ function renderInsights(data) {
   }
 }
 
-function renderSummary(containerId, rows, emptyText) {
+function renderSummary(containerId, rows, emptyText, absoluteValues = false) {
   const container = el(containerId);
   container.innerHTML = "";
 
@@ -367,15 +378,19 @@ function renderSummary(containerId, rows, emptyText) {
     return;
   }
 
+  const totalAbs = rows.reduce((sum, row) => sum + Math.abs(row.value), 0) || 1;
+
   rows.forEach((row) => {
+    const percentage = Math.round((Math.abs(row.value) / totalAbs) * 100);
+    const displayValue = absoluteValues ? Math.abs(row.value) : row.value;
     const div = document.createElement("div");
     div.className = "summary-row";
     div.innerHTML = `
       <div>
         <strong>${row.label}</strong>
-        ${row.subLabel ? `<small>${row.subLabel}</small>` : ""}
+        <small>${percentage}% do total apresentado</small>
       </div>
-      <strong class="${row.value >= 0 ? "positive" : "negative"}">${formatMoney(row.value)}</strong>
+      <strong class="${row.value >= 0 ? "positive" : "negative"}">${formatMoney(displayValue)}</strong>
     `;
     container.appendChild(div);
   });
@@ -385,7 +400,7 @@ function setupCanvas(canvas) {
   const ratio = window.devicePixelRatio || 1;
   const rect = canvas.getBoundingClientRect();
   const width = Math.max(320, rect.width || canvas.parentElement.clientWidth || 320);
-  const height = Number(canvas.getAttribute("height")) || 240;
+  const height = Number(canvas.getAttribute("height")) || 260;
 
   canvas.width = width * ratio;
   canvas.height = height * ratio;
@@ -410,14 +425,14 @@ function drawDonut(canvasId, legendId, rows, emptyText) {
   const legend = el(legendId);
   legend.innerHTML = "";
 
-  const positiveRows = rows
+  const cleanRows = rows
     .filter((row) => Math.abs(row.value) > 0)
     .slice(0, 8)
     .map((row) => ({ ...row, value: Math.abs(row.value) }));
 
-  const total = positiveRows.reduce((sum, row) => sum + row.value, 0);
+  const total = cleanRows.reduce((sum, row) => sum + row.value, 0);
 
-  if (!positiveRows.length || total === 0) {
+  if (!cleanRows.length || total === 0) {
     drawEmptyCanvas(canvas, emptyText);
     legend.innerHTML = `<p class="hint">${emptyText}</p>`;
     return;
@@ -433,7 +448,7 @@ function drawDonut(canvasId, legendId, rows, emptyText) {
 
   let start = -Math.PI / 2;
 
-  positiveRows.forEach((row, index) => {
+  cleanRows.forEach((row, index) => {
     const angle = (row.value / total) * Math.PI * 2;
     ctx.beginPath();
     ctx.arc(cx, cy, radius, start, start + angle);
@@ -452,7 +467,7 @@ function drawDonut(canvasId, legendId, rows, emptyText) {
   ctx.font = "12px system-ui";
   ctx.fillText("total", cx, cy + 18);
 
-  positiveRows.forEach((row, index) => {
+  cleanRows.forEach((row, index) => {
     const pct = Math.round((row.value / total) * 100);
     const div = document.createElement("div");
     div.className = "legend-item";
@@ -465,153 +480,24 @@ function drawDonut(canvasId, legendId, rows, emptyText) {
   });
 }
 
-function drawCashflowChart(data) {
-  const canvas = el("cashflowCanvas");
-  const yearData = getYearMovements();
-  if (!yearData.length) {
-    drawEmptyCanvas(canvas, "Ainda não há dados para este ano.");
-    return;
-  }
-
-  const { ctx, width, height } = setupCanvas(canvas);
-  ctx.clearRect(0, 0, width, height);
-
-  const months = Array.from({ length: 12 }, (_, i) => i + 1);
-  const values = months.map((month) => {
-    const monthKey = String(month).padStart(2, "0");
-    const rows = yearData.filter((m) => (m.date || "").slice(5, 7) === monthKey);
-    const totals = calculateTotals(rows);
-    return {
-      month,
-      inflow: totals.inflow,
-      expenses: Math.abs(totals.expenses),
-      balance: totals.balance
-    };
-  });
-
-  const max = Math.max(...values.flatMap((v) => [v.inflow, v.expenses, Math.abs(v.balance)]), 1);
-  const padding = { left: 44, right: 18, top: 18, bottom: 42 };
-  const chartW = width - padding.left - padding.right;
-  const chartH = height - padding.top - padding.bottom;
-  const groupW = chartW / 12;
-  const barW = Math.max(8, groupW * 0.24);
-
-  ctx.strokeStyle = "#dde3ee";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(padding.left, padding.top + chartH);
-  ctx.lineTo(width - padding.right, padding.top + chartH);
-  ctx.stroke();
-
-  values.forEach((v, index) => {
-    const x = padding.left + index * groupW + groupW / 2;
-    const inflowH = (v.inflow / max) * chartH;
-    const expenseH = (v.expenses / max) * chartH;
-
-    ctx.fillStyle = "#067647";
-    ctx.fillRect(x - barW - 2, padding.top + chartH - inflowH, barW, inflowH);
-
-    ctx.fillStyle = "#b42318";
-    ctx.fillRect(x + 2, padding.top + chartH - expenseH, barW, expenseH);
-
-    ctx.fillStyle = "#667085";
-    ctx.font = "11px system-ui";
-    ctx.textAlign = "center";
-    ctx.fillText(String(v.month).padStart(2, "0"), x, height - 18);
-  });
-
-  ctx.fillStyle = "#667085";
-  ctx.font = "12px system-ui";
-  ctx.textAlign = "left";
-  ctx.fillText("■ Entradas", padding.left, 14);
-  ctx.fillStyle = "#b42318";
-  ctx.fillText("■ Despesas", padding.left + 86, 14);
-}
-
-function drawCumulativeChart() {
-  const canvas = el("cumulativeCanvas");
-  const yearData = getYearMovements();
-  if (!yearData.length) {
-    drawEmptyCanvas(canvas, "Ainda não há dados para este ano.");
-    return;
-  }
-
-  const { ctx, width, height } = setupCanvas(canvas);
-  ctx.clearRect(0, 0, width, height);
-
-  const months = Array.from({ length: 12 }, (_, i) => i + 1);
-  let cumulative = 0;
-  const points = months.map((month) => {
-    const monthKey = String(month).padStart(2, "0");
-    const rows = yearData.filter((m) => (m.date || "").slice(5, 7) === monthKey);
-    cumulative += rows.reduce((sum, m) => sum + Number(m.value || 0), 0);
-    return { month, value: cumulative };
-  });
-
-  const min = Math.min(...points.map((p) => p.value), 0);
-  const max = Math.max(...points.map((p) => p.value), 1);
-  const range = max - min || 1;
-
-  const padding = { left: 38, right: 16, top: 20, bottom: 38 };
-  const chartW = width - padding.left - padding.right;
-  const chartH = height - padding.top - padding.bottom;
-
-  function xFor(index) {
-    return padding.left + (index / 11) * chartW;
-  }
-
-  function yFor(value) {
-    return padding.top + chartH - ((value - min) / range) * chartH;
-  }
-
-  const zeroY = yFor(0);
-  ctx.strokeStyle = "#dde3ee";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(padding.left, zeroY);
-  ctx.lineTo(width - padding.right, zeroY);
-  ctx.stroke();
-
-  ctx.strokeStyle = "#175cd3";
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-
-  points.forEach((point, index) => {
-    const x = xFor(index);
-    const y = yFor(point.value);
-    if (index === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-  ctx.stroke();
-
-  points.forEach((point, index) => {
-    const x = xFor(index);
-    const y = yFor(point.value);
-    ctx.fillStyle = point.value >= 0 ? "#067647" : "#b42318";
-    ctx.beginPath();
-    ctx.arc(x, y, 4, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "#667085";
-    ctx.font = "11px system-ui";
-    ctx.textAlign = "center";
-    ctx.fillText(String(point.month).padStart(2, "0"), x, height - 16);
-  });
-}
-
 function renderDashboard(data) {
-  const categoryRows = groupByCategory(data);
   const expenseRows = groupByCategory(data, (m) => Number(m.value) < 0);
   const inflowRows = groupByCategory(data, (m) => Number(m.value) > 0);
 
   renderInsights(data);
-  renderSummary("categorySummary", categoryRows, "Ainda não há dados para apresentar.");
-  renderSummary("topExpensesList", expenseRows.slice(0, 8), "Ainda não há despesas para apresentar.");
 
-  drawCashflowChart(data);
-  drawCumulativeChart();
   drawDonut("expenseDonutCanvas", "expenseDonutLegend", expenseRows, "Sem despesas no período.");
   drawDonut("inflowDonutCanvas", "inflowDonutLegend", inflowRows, "Sem entradas no período.");
+
+  renderSummary("expenseCategoriesTable", expenseRows, "Ainda não há despesas para apresentar.", true);
+}
+
+function renderDashboardTables(data) {
+  const expenseRows = groupByCategory(data, (m) => Number(m.value) < 0);
+  const inflowRows = groupByCategory(data, (m) => Number(m.value) > 0);
+
+  renderSummary("expenseCategoriesTable", expenseRows, "Ainda não há despesas para apresentar.", true);
+  renderSummary("inflowCategoriesTable", inflowRows, "Ainda não há entradas para apresentar.", false);
 }
 
 function renderTable(data) {
@@ -646,12 +532,22 @@ function renderTable(data) {
 }
 
 function render() {
-  renderPeriodFilters();
+  renderChips();
   renderHome();
 
   const dashboardData = getDashboardMovements();
   renderCards(dashboardData);
-  renderDashboard(dashboardData);
+  renderInsights(dashboardData);
+
+  const expenseRows = groupByCategory(dashboardData, (m) => Number(m.value) < 0);
+  const inflowRows = groupByCategory(dashboardData, (m) => Number(m.value) > 0);
+
+  drawDonut("expenseDonutCanvas", "expenseDonutLegend", expenseRows, "Sem despesas no período.");
+  drawDonut("inflowDonutCanvas", "inflowDonutLegend", inflowRows, "Sem entradas no período.");
+
+  renderSummary("expenseCategoriesTable", expenseRows, "Ainda não há despesas para apresentar.", true);
+  renderSummary("inflowCategoriesTable", inflowRows, "Ainda não há entradas para apresentar.", false);
+
   renderTable(getTableMovements());
 }
 
@@ -711,15 +607,11 @@ document.querySelectorAll("[data-page]").forEach((button) => {
 el("logoutBtn").addEventListener("click", showPin);
 el("category").addEventListener("change", updateTypePreview);
 el("movementForm").addEventListener("submit", addMovement);
-el("yearFilter").addEventListener("change", render);
-el("monthFilter").addEventListener("change", render);
 el("tableTypeFilter").addEventListener("change", render);
 el("exportBtn").addEventListener("click", exportCSV);
 el("refreshBtn").addEventListener("click", manualRefresh);
 
-window.addEventListener("resize", () => {
-  render();
-});
+window.addEventListener("resize", () => render());
 
 updateCategoryOptions();
 setDefaultDate();
