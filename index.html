@@ -89,56 +89,124 @@
     </section>
 
     <section id="dashboardPage" class="page">
-      <div class="panel-header page-header">
+      <div class="dashboard-hero">
         <div>
-          <h2>Dashboard</h2>
-          <p>Resumo financeiro com gráficos e indicadores.</p>
+          <span class="eyebrow">Dashboard</span>
+          <h2>Visão financeira</h2>
+          <p>Analisa despesas, entradas, saldo e evolução mensal.</p>
         </div>
-        <select id="monthFilter">
-          <option value="all">Todos os meses</option>
-        </select>
+
+        <div class="filter-card">
+          <label>
+            Ano
+            <select id="yearFilter"></select>
+          </label>
+
+          <label>
+            Mês
+            <select id="monthFilter">
+              <option value="all">Ano completo</option>
+            </select>
+          </label>
+        </div>
       </div>
 
-      <section class="grid cards">
+      <section class="grid cards dashboard-kpis">
         <article class="card">
           <span class="label">Entradas</span>
           <strong id="totalInflow">0,00 €</strong>
+          <small id="inflowDetail">—</small>
         </article>
         <article class="card">
           <span class="label">Despesas</span>
           <strong id="totalExpenses">0,00 €</strong>
+          <small id="expensesDetail">—</small>
         </article>
-        <article class="card">
+        <article class="card featured-card">
           <span class="label">Saldo</span>
           <strong id="balance">0,00 €</strong>
+          <small id="balanceDetail">—</small>
         </article>
         <article class="card">
           <span class="label">Movimentos</span>
           <strong id="movementCount">0</strong>
+          <small id="movementDetail">—</small>
+        </article>
+      </section>
+
+      <section class="insight-strip">
+        <article class="insight-card">
+          <span>Maior despesa</span>
+          <strong id="biggestExpense">—</strong>
+          <small id="biggestExpenseMeta">—</small>
+        </article>
+        <article class="insight-card">
+          <span>Principal categoria de despesa</span>
+          <strong id="topExpenseCategory">—</strong>
+          <small id="topExpenseCategoryMeta">—</small>
+        </article>
+        <article class="insight-card">
+          <span>Principal fonte de entrada</span>
+          <strong id="topInflowCategory">—</strong>
+          <small id="topInflowCategoryMeta">—</small>
+        </article>
+      </section>
+
+      <section class="chart-grid">
+        <article class="panel large-chart">
+          <div class="panel-title">
+            <div>
+              <h3>Cashflow mensal</h3>
+              <p>Entradas, despesas e saldo por mês.</p>
+            </div>
+          </div>
+          <canvas id="cashflowCanvas" height="260"></canvas>
+        </article>
+
+        <article class="panel">
+          <div class="panel-title">
+            <div>
+              <h3>Despesas por categoria</h3>
+              <p>Distribuição das despesas no período seleccionado.</p>
+            </div>
+          </div>
+          <canvas id="expenseDonutCanvas" height="260"></canvas>
+          <div id="expenseDonutLegend" class="legend"></div>
+        </article>
+      </section>
+
+      <section class="chart-grid">
+        <article class="panel">
+          <div class="panel-title">
+            <div>
+              <h3>Entradas por categoria</h3>
+              <p>Origem das entradas no período seleccionado.</p>
+            </div>
+          </div>
+          <canvas id="inflowDonutCanvas" height="240"></canvas>
+          <div id="inflowDonutLegend" class="legend"></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-title">
+            <div>
+              <h3>Saldo acumulado</h3>
+              <p>Evolução acumulada ao longo do ano.</p>
+            </div>
+          </div>
+          <canvas id="cumulativeCanvas" height="240"></canvas>
         </article>
       </section>
 
       <section class="dashboard-grid">
         <article class="panel">
-          <h3>Entradas vs despesas por mês</h3>
-          <div id="monthlyChart" class="bar-chart"></div>
+          <h3>Top despesas</h3>
+          <div id="topExpensesList" class="summary-list"></div>
         </article>
 
-        <article class="panel">
-          <h3>Despesas por categoria</h3>
-          <div id="expenseCategoryChart" class="bar-chart"></div>
-        </article>
-      </section>
-
-      <section class="dashboard-grid">
         <article class="panel">
           <h3>Resumo por categoria</h3>
           <div id="categorySummary" class="summary-list"></div>
-        </article>
-
-        <article class="panel">
-          <h3>Resumo por mês</h3>
-          <div id="monthSummary" class="summary-list"></div>
         </article>
       </section>
     </section>
