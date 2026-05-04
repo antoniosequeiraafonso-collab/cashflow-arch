@@ -48,10 +48,13 @@
             <input id="date" type="date" required />
           </label>
 
-          <label>
-            Categoria
-            <select id="category" required></select>
-          </label>
+          <div class="category-field">
+            <label>
+              Categoria
+              <select id="category" required></select>
+            </label>
+            <button id="openCategoriesBtn" type="button" class="icon-button" title="Gerir categorias" aria-label="Gerir categorias">⚙️</button>
+          </div>
 
           <div class="type-preview">
             <span>Tipo detectado</span>
@@ -91,27 +94,7 @@
           <small id="lastMovementMeta">Ainda sem movimentos</small>
         </article>
       </section>
-
-      <article class="panel category-manager">
-        <div class="panel-title">
-          <div>
-            <h3>Categorias</h3>
-            <p>Cria novas categorias e define se são despesas ou entradas.</p>
-          </div>
-        </div>
-
-        <form id="categoryForm" class="category-form">
-          <input id="newCategoryName" type="text" placeholder="Nova categoria" required />
-          <select id="newCategoryType">
-            <option value="Expenses">Despesa</option>
-            <option value="Inflow">Entrada</option>
-          </select>
-          <button type="submit">Adicionar categoria</button>
-        </form>
-
-        <div id="categoryList" class="category-list"></div>
-      </article>
-    </section>
+</section>
 
     <section id="dashboardPage" class="page">
       <div class="dashboard-hero">
@@ -277,6 +260,35 @@
       </article>
     </section>
   </main>
+
+
+  <div id="categoryModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="categoryModalTitle">
+    <section class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h2 id="categoryModalTitle">Gerir categorias</h2>
+          <p>Cria, edita e apaga categorias usadas nos movimentos.</p>
+        </div>
+        <button id="closeCategoriesBtn" type="button" class="icon-button" aria-label="Fechar">✕</button>
+      </div>
+
+      <form id="categoryForm" class="category-form">
+        <input id="newCategoryName" type="text" placeholder="Nova categoria" required />
+        <select id="newCategoryType">
+          <option value="Expenses">Despesa</option>
+          <option value="Inflow">Entrada</option>
+        </select>
+        <button type="submit">Adicionar</button>
+      </form>
+
+      <div class="modal-section-title">
+        <strong>Categorias existentes</strong>
+        <small>As categorias base não podem ser apagadas. Categorias em uso não podem ser apagadas directamente.</small>
+      </div>
+
+      <div id="categoryList" class="category-list"></div>
+    </section>
+  </div>
 
   <script type="module" src="./app.js"></script>
 </body>

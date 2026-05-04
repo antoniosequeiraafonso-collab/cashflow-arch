@@ -165,6 +165,15 @@ function showPin() {
   localStorage.removeItem("cashflowPinOk");
 }
 
+function openCategoryModal() {
+  el("categoryModal").classList.remove("hidden");
+  renderCategoryList();
+}
+
+function closeCategoryModal() {
+  el("categoryModal").classList.add("hidden");
+}
+
 function setPage(page) {
   document.querySelectorAll(".page").forEach((section) => section.classList.remove("active"));
   document.querySelectorAll(".tab").forEach((button) => button.classList.remove("active"));
@@ -293,31 +302,104 @@ function renderCategoryList() {
 
   container.innerHTML = "";
 
-  const rows = categoryDefinitions
-    .filter((item) => item.source === "custom")
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const rows = [...categoryDefinitions].sort((a, b) => {
+    if (a.type !== b.type) return a.type === "Inflow" ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
 
   if (!rows.length) {
-    container.innerHTML = `<p class="hint">Ainda não criaste categorias novas.</p>`;
+    container.innerHTML = `<p class="hint">Ainda não existem categorias.</p>`;
     return;
   }
 
   rows.forEach((item) => {
+    const usedCount = movements.filter((movement) => movement.category === item.name).length;
+    const isDefault = item.source === "default";
+    const canDelete = !isDefault && usedCount === 0;
+    const canEdit = !isDefault;
+
     const div = document.createElement("div");
-    div.className = "category-pill";
+    div.className = "category-row";
     div.innerHTML = `
-      <div>
+      <div class="category-row-main">
         <strong>${item.name}</strong>
-        <small>${typeLabel(item.type)}</small>
+        <small>${typeLabel(item.type)}${isDefault ? " · categoria base" : ""}${usedCount ? ` · ${usedCount} movimento(s)` : ""}</small>
       </div>
-      <button class="danger" data-category-delete-id="${item.id}" data-category-name="${item.name}">Apagar</button>
+
+      <div class="category-row-actions">
+        ${canEdit ? `<button class="secondary" data-category-edit-id="${item.id}" data-category-name="${item.name}" data-category-type="${item.type}">Editar</button>` : `<span class="locked-label">Base</span>`}
+        ${canDelete ? `<button class="danger" data-category-delete-id="${item.id}" data-category-name="${item.name}">Apagar</button>` : `<button class="danger" disabled title="${isDefault ? "Categoria base" : "Categoria em uso"}">Apagar</button>`}
+      </div>
     `;
     container.appendChild(div);
+  });
+
+  document.querySelectorAll("[data-category-edit-id]").forEach((button) => {
+    button.addEventListener("click", () => startEditingCategory(
+      button.dataset.categoryEditId,
+      button.dataset.categoryName,
+      button.dataset.categoryType
+    ));
   });
 
   document.querySelectorAll("[data-category-delete-id]").forEach((button) => {
     button.addEventListener("click", () => removeCategory(button.dataset.categoryDeleteId, button.dataset.categoryName));
   });
+}
+
+async function startEditingCategory(id, currentName, currentType) {
+  const usedCount = movements.filter((movement) => movement.category === currentName).length;
+
+  const newName = prompt("Novo nome da categoria:", currentName);
+  if (!newName) return;
+
+  const cleanName = newName.trim();
+  if (!cleanName) return;
+
+  const duplicate = categoryDefinitions.some((item) =>
+    item.name.toLowerCase() === cleanName.toLowerCase() && item.name !== currentName
+  );
+
+  if (duplicate) {
+    alert("Já existe uma categoria com esse nome.");
+    return;
+  }
+
+  let newType = currentType;
+
+  if (usedCount === 0) {
+    const typeAnswer = prompt("Tipo da categoria: escreve 'entrada' ou 'despesa'", currentType === "Inflow" ? "entrada" : "despesa");
+    if (!typeAnswer) return;
+
+    const normalized = typeAnswer.trim().toLowerCase();
+    if (normalized.startsWith("entr")) newType = "Inflow";
+    else if (normalized.startsWith("desp")) newType = "Expenses";
+    else {
+      alert("Tipo inválido. Usa 'entrada' ou 'despesa'.");
+      return;
+    }
+  } else if (cleanName !== currentName) {
+    const ok = confirm(`Esta categoria está em uso em ${usedCount} movimento(s). Queres renomear também esses movimentos?`);
+    if (!ok) return;
+  }
+
+  await updateDoc(doc(db, "categories", id), {
+    name: cleanName,
+    type: newType,
+    updatedAt: serverTimestamp()
+  });
+
+  if (usedCount > 0 && cleanName !== currentName) {
+    const affected = movements.filter((movement) => movement.category === currentName);
+    await Promise.all(
+      affected.map((movement) =>
+        updateDoc(doc(db, "movements", movement.id), {
+          category: cleanName,
+          updatedAt: serverTimestamp()
+        })
+      )
+    );
+  }
 }
 
 async function addMovement(event) {
@@ -807,6 +889,11 @@ el("logoutBtn").addEventListener("click", showPin);
 el("category").addEventListener("change", updateTypePreview);
 el("movementForm").addEventListener("submit", addMovement);
 el("categoryForm").addEventListener("submit", addCategory);
+el("openCategoriesBtn").addEventListener("click", openCategoryModal);
+el("closeCategoriesBtn").addEventListener("click", closeCategoryModal);
+el("categoryModal").addEventListener("click", (event) => {
+  if (event.target.id === "categoryModal") closeCategoryModal();
+});
 el("cancelEditBtn").addEventListener("click", stopEditing);
 el("tableTypeFilter").addEventListener("change", render);
 el("tableCategoryFilter").addEventListener("change", render);

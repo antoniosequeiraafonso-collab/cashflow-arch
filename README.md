@@ -1,8 +1,10 @@
 # Cashflow Arch
 
-Versão 9:
-- Corrige definitivamente o crescimento de espaço no dashboard mobile
-- Substitui canvas por gráficos donut em CSS estáveis
-- Mantém edição de movimentos
-- Mantém criação de categorias
-- Mantém filtros multi-ano e multi-mês
+Versão 10:
+- Roda dentada ao lado do campo Categoria
+- Modal para gerir categorias
+- Ver todas as categorias
+- Criar, editar e apagar categorias customizadas
+- Categorias base protegidas
+- Categorias em uso não podem ser apagadas
+- Renomear categoria em uso actualiza movimentos existentes

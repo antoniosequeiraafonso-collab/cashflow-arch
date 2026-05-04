@@ -985,3 +985,158 @@ canvas {
     font-size: 11px;
   }
 }
+
+
+/* Category settings modal */
+.category-field {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.icon-button {
+  width: 46px;
+  height: 46px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 14px;
+  background: var(--soft);
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-size: 18px;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(7, 25, 54, 0.46);
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+.modal-card {
+  width: min(760px, 100%);
+  max-height: min(720px, 92vh);
+  overflow: auto;
+  background: #fff;
+  border-radius: 26px;
+  box-shadow: 0 24px 70px rgba(7, 25, 54, 0.28);
+  border: 1px solid var(--border);
+  padding: 24px;
+}
+
+.modal-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 14px;
+  align-items: start;
+  margin-bottom: 18px;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: -0.03em;
+}
+
+.modal-header p {
+  margin: 5px 0 0;
+  color: var(--muted);
+}
+
+.modal-section-title {
+  display: grid;
+  gap: 4px;
+  margin: 18px 0 10px;
+}
+
+.modal-section-title small {
+  color: var(--muted);
+}
+
+.category-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px;
+}
+
+.category-row-main small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+}
+
+.category-row-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.category-row-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.locked-label {
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--soft);
+  padding: 8px 10px;
+  border-radius: 12px;
+  font-weight: 800;
+}
+
+@media (max-width: 760px) {
+  .category-field {
+    grid-template-columns: 1fr auto;
+  }
+
+  .icon-button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .modal-backdrop {
+    align-items: end;
+    padding: 0;
+  }
+
+  .modal-card {
+    width: 100%;
+    max-height: 88vh;
+    border-radius: 24px 24px 0 0;
+    padding: 18px;
+  }
+
+  .modal-header h2 {
+    font-size: 22px;
+  }
+
+  .modal-header p,
+  .modal-section-title small {
+    font-size: 13px;
+  }
+
+  .category-row {
+    grid-template-columns: 1fr;
+  }
+
+  .category-row-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .category-row-actions button,
+  .category-row-actions .locked-label {
+    width: 100%;
+    text-align: center;
+  }
+}
