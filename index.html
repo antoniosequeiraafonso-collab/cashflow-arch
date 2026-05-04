@@ -164,7 +164,7 @@
               <p>Distribuição das despesas no período seleccionado.</p>
             </div>
           </div>
-          <canvas id="expenseDonutCanvas" height="280"></canvas>
+          <canvas id="expenseDonutCanvas" height="240"></canvas>
           <div id="expenseDonutLegend" class="legend"></div>
         </article>
 
@@ -175,7 +175,7 @@
               <p>Distribuição das entradas no período seleccionado.</p>
             </div>
           </div>
-          <canvas id="inflowDonutCanvas" height="280"></canvas>
+          <canvas id="inflowDonutCanvas" height="240"></canvas>
           <div id="inflowDonutLegend" class="legend"></div>
         </article>
       </section>
@@ -204,21 +204,34 @@
     </section>
 
     <section id="movementsPage" class="page">
-      <div class="panel-header page-header">
+      <div class="panel-header page-header movements-header">
         <div>
           <h2>Movimentos</h2>
           <p>Tabela completa de entradas e despesas.</p>
         </div>
+
+        <article class="account-balance-card">
+          <span>Saldo total da conta bancária</span>
+          <strong id="accountBalance">0,00 €</strong>
+        </article>
+      </div>
+
+      <article class="panel movement-filters">
         <div class="actions">
           <select id="tableTypeFilter">
             <option value="all">Todos os tipos</option>
             <option value="Expenses">Despesas</option>
             <option value="Inflow">Entradas</option>
           </select>
+
+          <select id="tableCategoryFilter">
+            <option value="all">Todas as categorias</option>
+          </select>
+
           <button id="exportBtn" class="secondary">Exportar CSV</button>
           <button id="refreshBtn" class="secondary">Actualizar</button>
         </div>
-      </div>
+      </article>
 
       <article class="panel">
         <div class="table-wrap">

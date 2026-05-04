@@ -267,6 +267,26 @@ function renderChips() {
   });
 }
 
+function renderTableCategoryFilter() {
+  const select = el("tableCategoryFilter");
+  const current = select.value || "all";
+
+  const categories = [...new Set(movements.map((movement) => movement.category).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+
+  select.innerHTML = `<option value="all">Todas as categorias</option>`;
+
+  categories.forEach((category) => {
+    const option = document.createElement("option");
+    option.value = category;
+    option.textContent = category;
+    select.appendChild(option);
+  });
+
+  if ([...select.options].some((option) => option.value === current)) {
+    select.value = current;
+  }
+}
+
 function getDashboardMovements() {
   return movements.filter((movement) => {
     const date = movement.date || "";
@@ -280,8 +300,13 @@ function getDashboardMovements() {
 
 function getTableMovements() {
   const selectedType = el("tableTypeFilter").value;
-  if (selectedType === "all") return movements;
-  return movements.filter((movement) => movement.type === selectedType);
+  const selectedCategory = el("tableCategoryFilter").value;
+
+  return movements.filter((movement) => {
+    const typeOk = selectedType === "all" || movement.type === selectedType;
+    const categoryOk = selectedCategory === "all" || movement.category === selectedCategory;
+    return typeOk && categoryOk;
+  });
 }
 
 function calculateTotals(data) {
@@ -500,6 +525,13 @@ function renderDashboardTables(data) {
   renderSummary("inflowCategoriesTable", inflowRows, "Ainda não há entradas para apresentar.", false);
 }
 
+function renderAccountBalance() {
+  const totalBalance = movements.reduce((sum, movement) => sum + Number(movement.value || 0), 0);
+  const balanceEl = el("accountBalance");
+  balanceEl.textContent = formatMoney(totalBalance);
+  balanceEl.className = totalBalance >= 0 ? "positive" : "negative";
+}
+
 function renderTable(data) {
   const tbody = el("movementsTable");
   tbody.innerHTML = "";
@@ -533,7 +565,9 @@ function renderTable(data) {
 
 function render() {
   renderChips();
+  renderTableCategoryFilter();
   renderHome();
+  renderAccountBalance();
 
   const dashboardData = getDashboardMovements();
   renderCards(dashboardData);
@@ -608,6 +642,7 @@ el("logoutBtn").addEventListener("click", showPin);
 el("category").addEventListener("change", updateTypePreview);
 el("movementForm").addEventListener("submit", addMovement);
 el("tableTypeFilter").addEventListener("change", render);
+el("tableCategoryFilter").addEventListener("change", render);
 el("exportBtn").addEventListener("click", exportCSV);
 el("refreshBtn").addEventListener("click", manualRefresh);
 

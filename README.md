@@ -1,7 +1,7 @@
 # Cashflow Arch
 
-Versão 4:
-- Dashboard com selecção múltipla de anos e meses
-- Sem gráficos de barras ou linhas
-- Gráficos donut para entradas e despesas
-- Tabelas separadas para principais categorias de despesas e entradas
+Versão 6:
+- Página Movimentos com saldo total da conta bancária
+- Filtro por categoria na tabela de movimentos
+- Export CSV respeita filtro por tipo e categoria
+- Mantém melhorias mobile
