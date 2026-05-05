@@ -717,6 +717,45 @@ function renderSummary(containerId, rows, emptyText, absoluteValues = false) {
   });
 }
 
+function buildDonutRows(rows) {
+  const normalizedRows = rows
+    .filter((row) => Math.abs(row.value) > 0)
+    .map((row) => ({ ...row, value: Math.abs(row.value) }))
+    .sort((a, b) => b.value - a.value);
+
+  const total = normalizedRows.reduce((sum, row) => sum + row.value, 0);
+
+  if (!normalizedRows.length || total === 0) {
+    return { total: 0, rows: [] };
+  }
+
+  let accumulated = 0;
+  const visibleRows = [];
+  const otherRows = [];
+
+  normalizedRows.forEach((row) => {
+    const currentShare = accumulated / total;
+
+    if (currentShare < 0.8) {
+      visibleRows.push(row);
+      accumulated += row.value;
+    } else {
+      otherRows.push(row);
+    }
+  });
+
+  const otherTotal = otherRows.reduce((sum, row) => sum + row.value, 0);
+
+  if (otherTotal > 0) {
+    visibleRows.push({
+      label: "Outros",
+      value: otherTotal
+    });
+  }
+
+  return { total, rows: visibleRows };
+}
+
 function renderCssDonut(chartId, legendId, rows, emptyText) {
   const chart = el(chartId);
   const legend = el(legendId);
@@ -724,12 +763,7 @@ function renderCssDonut(chartId, legendId, rows, emptyText) {
   chart.innerHTML = "";
   legend.innerHTML = "";
 
-  const cleanRows = rows
-    .filter((row) => Math.abs(row.value) > 0)
-    .slice(0, 8)
-    .map((row) => ({ ...row, value: Math.abs(row.value) }));
-
-  const total = cleanRows.reduce((sum, row) => sum + row.value, 0);
+  const { total, rows: cleanRows } = buildDonutRows(rows);
 
   if (!cleanRows.length || total === 0) {
     chart.className = "donut-chart empty";
