@@ -736,7 +736,7 @@ function buildDonutRows(rows) {
   normalizedRows.forEach((row) => {
     const currentShare = accumulated / total;
 
-    if (currentShare < 0.8) {
+    if (currentShare < 0.95) {
       visibleRows.push(row);
       accumulated += row.value;
     } else {
